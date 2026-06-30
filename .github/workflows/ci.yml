@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: flexmodel-sdks/typescript
+        working-directory: typescript
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
