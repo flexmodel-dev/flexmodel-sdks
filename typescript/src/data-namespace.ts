@@ -65,6 +65,20 @@ export class DataNamespace<TSchema extends SchemaMap = SchemaMap> {
     return this.proxy
   }
 
+  /**
+   * 创建带类型约束的命名空间实例。
+   * 传入 Schema interface 后，属性访问获得类型推断。
+   * 纯类型级操作，运行时行为不变。
+   *
+   * @example
+   * interface MySchema { Student: { id: number; name: string } }
+   * const typed = data.schema<MySchema>()
+   * typed.Student.findMany()  // Student 有类型提示
+   */
+  schema<T extends SchemaMap>(): DataNamespace<T> & { [K in keyof T]: ModelHandle<T[K]> } {
+    return this.asProxy() as unknown as DataNamespace<T> & { [K in keyof T]: ModelHandle<T[K]> }
+  }
+
   private createProxy(): DataNamespace<TSchema> & { [K in keyof TSchema]: ModelHandle<TSchema[K]> } {
     return new Proxy(this, {
       get(target, prop) {

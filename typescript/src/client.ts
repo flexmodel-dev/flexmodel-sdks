@@ -13,6 +13,12 @@ import type { FlexmodelClientOptions } from './types.js'
 
 type SchemaMap = Record<string, Record<string, unknown>>
 
+/** configure() 的配置选项，扩展 FlexmodelClientOptions 增加 authToken */
+export interface ConfigureOptions extends FlexmodelClientOptions {
+  /** 认证令牌（优先级高于 apiKey），传入 undefined 清除 */
+  authToken?: string
+}
+
 /**
  * Flexmodel SDK 客户端。
  *
@@ -83,6 +89,22 @@ export class FlexmodelClient<
   }
 
   /**
+   * 更新 API 基础地址（运行时可变）。
+   * 自动去除尾部斜杠。
+   */
+  setBaseURL(baseURL: string): void {
+    this.http.setBaseURL(baseURL)
+  }
+
+  /**
+   * 更新 API Key（运行时可变）。
+   * 传入 undefined 清除，后续请求不再注入 Authorization 头（除非设置了 authToken）。
+   */
+  setApiKey(apiKey?: string): void {
+    this.http.setApiKey(apiKey)
+  }
+
+  /**
    * 设置默认 projectId（运行时可变）。
    * 更新客户端及 DataNamespace 的默认 projectId，并清空已缓存的 ModelHandle，
    * 使后续 from() 调用以新 projectId 重建句柄。
@@ -129,3 +151,39 @@ function getEnvBaseURL(): string {
 export const flexmodelClient = new FlexmodelClient({
   baseURL: getEnvBaseURL(),
 })
+
+/**
+ * 配置全局单例的便捷函数。
+ * 修改 flexmodelClient 的 baseURL、apiKey、authToken、projectId，
+ * 后续通过 `data` 导出的操作将使用新配置。
+ *
+ * @example
+ * import { data, configure } from '@flexmodel/sdk'
+ * configure({ baseURL: 'https://api.example.com', apiKey: 'fm_ak_xxx', projectId: 'demo' })
+ * const students = await data.Student.findMany()
+ */
+export function configure(options: ConfigureOptions = {}): void {
+  if (options.baseURL !== undefined) {
+    flexmodelClient.setBaseURL(options.baseURL)
+  }
+  if (options.apiKey !== undefined) {
+    flexmodelClient.setApiKey(options.apiKey)
+  }
+  if (options.authToken !== undefined) {
+    flexmodelClient.setAuthToken(options.authToken)
+  }
+  if (options.projectId !== undefined) {
+    flexmodelClient.setProjectId(options.projectId)
+  }
+}
+
+/**
+ * 数据操作命名空间的便捷导出。
+ * 直接引用 flexmodelClient.data 的 Proxy 实例，
+ * 支持 data.Student.findMany() 等简写。
+ *
+ * @example
+ * import { data } from '@flexmodel/sdk'
+ * const students = await data.Student.findMany()
+ */
+export const data = flexmodelClient.data

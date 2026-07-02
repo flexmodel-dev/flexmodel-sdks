@@ -11,8 +11,8 @@ import { FlexmodelApiError, FlexmodelAuthError } from './errors.js'
 import type { RequestOptions } from './types.js'
 
 export class HttpTransport {
-  private readonly baseURL: string
-  private readonly apiKey?: string
+  private baseURL: string
+  private apiKey?: string
   private activeToken?: string
 
   constructor(baseURL: string, apiKey?: string) {
@@ -27,6 +27,22 @@ export class HttpTransport {
    */
   setAuthToken(token?: string): void {
     this.activeToken = token
+  }
+
+  /**
+   * 更新 API 基础地址（运行时可变）。
+   * 自动去除尾部斜杠。
+   */
+  setBaseURL(baseURL: string): void {
+    this.baseURL = baseURL.replace(/\/+$/, '')
+  }
+
+  /**
+   * 更新 API Key（运行时可变）。
+   * 传入 undefined 清除，后续请求不再注入 Authorization 头（除非设置了 authToken）。
+   */
+  setApiKey(apiKey?: string): void {
+    this.apiKey = apiKey
   }
 
   /**

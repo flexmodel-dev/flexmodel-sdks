@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { FlexmodelClient } from '../src/client'
+import { FlexmodelClient, flexmodelClient, configure, data } from '../src/client'
 import { ModelHandle } from '../src/model-handle'
 import { DataNamespace } from '../src/data-namespace'
 
@@ -242,5 +242,71 @@ describe('FlexmodelClient: Authorization header', () => {
 
     const [, init] = fetchMock.mock.calls[0]
     expect(init.headers['Authorization']).toBe('Bearer fm_ak_test')
+  })
+})
+
+describe('data export', () => {
+  it('data.Student returns a ModelHandle', () => {
+    configure({ baseURL: 'http://localhost:8080', projectId: 'demo' })
+    const handle = (data as any).Student
+    expect(handle).toBeInstanceOf(ModelHandle)
+  })
+
+  it('data is the same proxy as flexmodelClient.data', () => {
+    expect(data).toBe(flexmodelClient.data)
+  })
+
+  it('data.from() returns a ModelHandle', () => {
+    configure({ baseURL: 'http://localhost:8080', projectId: 'demo' })
+    const handle = data.from('Student')
+    expect(handle).toBeInstanceOf(ModelHandle)
+  })
+})
+
+describe('configure()', () => {
+  it('sets baseURL on singleton', () => {
+    configure({ baseURL: 'http://custom-host:9090' })
+    expect(flexmodelClient).toBeInstanceOf(FlexmodelClient)
+  })
+
+  it('sets apiKey and sends Authorization header', async () => {
+    const fetchMock = mockFetch({ total: 0, list: [] })
+    configure({ baseURL: 'http://localhost:8080', apiKey: 'fm_ak_configured', projectId: 'demo' })
+
+    await data.from('Student').findMany()
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.headers['Authorization']).toBe('Bearer fm_ak_configured')
+  })
+
+  it('sets authToken which overrides apiKey', async () => {
+    const fetchMock = mockFetch({ total: 0, list: [] })
+    configure({ baseURL: 'http://localhost:8080', apiKey: 'fm_ak_base', authToken: 'custom-token', projectId: 'demo' })
+
+    await data.from('Student').findMany()
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(init.headers['Authorization']).toBe('Bearer custom-token')
+  })
+
+  it('sets projectId', async () => {
+    const fetchMock = mockFetch({ total: 0, list: [] })
+    configure({ baseURL: 'http://localhost:8080', projectId: 'configured-project' })
+
+    await data.from('Student').findMany()
+
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toContain('/projects/configured-project/')
+  })
+})
+
+describe('DataNamespace: schema<T>() type narrowing', () => {
+  it('schema<T>() returns same proxy instance', () => {
+    const client = new FlexmodelClient({
+      baseURL: 'http://localhost:8080',
+      projectId: 'demo',
+    })
+    const typed = client.data.schema<{ Student: { id: number; name: string } }>()
+    expect(typed).toBe(client.data)
   })
 })
